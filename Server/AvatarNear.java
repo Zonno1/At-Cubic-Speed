@@ -1,22 +1,20 @@
 
 import tage.ai.behaviortrees.BTCondition;
-package mygame.ai;
 
-import mygame.ai.NPCcontroller;
 
+// Ensure this class extends BTCondition and implements the abstract check() method
 public class AvatarNear extends BTCondition {
-    NPC npc;
-    NPCcontroller npcc;
-    GameAIServerUDP server;
+    private NPCcontroller npcc;
 
-public AvatarNear(NPCcontroller npcController) {
+    public AvatarNear(NPCcontroller npcController) {
+        super(false);                     // call BTCondition constructor
         this.npcc = npcController;
     }
 
-    public boolean isAvatarNear() {
-        // Use the new getter on NPCcontroller
+    @Override
+    public boolean check() {
+        // return true when the avatar is near
         return npcc.getNearFlag();
     }
 }
-    
 

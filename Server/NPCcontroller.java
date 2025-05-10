@@ -1,102 +1,80 @@
-package mygame.ai;
 
 import java.util.Random;
-
+import java.util.UUID;
 import tage.ai.behaviortrees.BTCompositeType;
 import tage.ai.behaviortrees.BTSequence;
 import tage.ai.behaviortrees.BehaviorTree;
-import java.util.UUID;
-import org.joml.Vector3f;
-import mygame.behaviortrees.OneSecPassed;
-import mygame.behaviortrees.getSmall;
-import mygame.behaviortrees.getBig;
+import tage.rml.Vector3f;
 
-public class NPCcontroller
-{
+public class NPCcontroller {
     private NPC npc;
-    Random rn = new Random();
-    BehaviorTree bt = new BehaviorTree(BTCompositeType.SELECTOR);
-    boolean nearFlag = false;
-    long thinkStartTime, tickStartTime;
-    GameAIServerUDP server;
-    double criteria = 2.0;
-
-    private UUID npcID;
-    private Vector3f position;
-    private double size;
-
-    // Tick & think timestamps
+    private Random rn = new Random();
+    private BehaviorTree bt;
+    private boolean nearFlag = false;
     private long lastThinkUpdateTime;
     private long lastTickUpdateTime;
+    private GameAIServerUDP server;
 
-
-
-    public void updateNPCs()
-    {
-        npc.updateLocation();
+    public NPCcontroller() {
+        // Initialize behavior tree with selector root
+        bt = new BehaviorTree(BTCompositeType.SELECTOR);
     }
 
-    public void start (GameAIServerUDP s)
-    {
-        thinkStartTime = System.nanoTime();
-        tickStartTime = System.nanoTime();
-        lastThinkUpdateTime = thinkStartTime;
-        lastTickUpdateTime = tickStartTime;
-        server =s;
+    public void start(GameAIServerUDP s) {
+        server = s;
+        // Initialize timing
+        long now = System.nanoTime();
+        lastThinkUpdateTime = now;
+        lastTickUpdateTime  = now;
+        // Create NPC and behavior tree tasks
         setupNPCs();
         setupBehaviorTree();
+        // Begin main loop
         npcLoop();
-
     }
 
-    public void setupNPCs()
-    {
+    private void setupNPCs() {
         npc = new NPC();
         npc.randomizeLocation(rn.nextInt(40), rn.nextInt(40));
     }
 
-    public void npcLoop()
-    {
-        while (true)
-        {
-            long currentTime = System.nanoTime();
-            float elapsedThinkMilliSecs =(currentTime-lastThinkUpdateTime)/(100000.0f);
-            float elapsedTickMilliSecs = (currentTime-lastTickUpdateTime)/(1000000.0);
+    private void setupBehaviorTree() {
+        // Two parallel sequences under root selector
+        bt.insertAtRoot(new BTSequence(10));
+        bt.insertAtRoot(new BTSequence(20));
+        // Tasks for first sequence
+        bt.insert(10, new OneSecPassed(this));
+        bt.insert(10, new getSmall(this));
+        // Tasks for second sequence
+        bt.insert(20, new AvatarNear(this));
+        bt.insert(20, new getBig(this));
+    }
 
-            if (elapsedTickMilliSecs >= 25.0f)
-            { 
-                lastTickUpdateTime = currentTime;
+    private void npcLoop() {
+        while (true) {
+            long current = System.nanoTime();
+            float elapsedTickMs   = (current - lastTickUpdateTime) / 1_000_000.0f;
+            float elapsedThinkMs  = (current - lastThinkUpdateTime) / 1_000_000.0f;
+
+            if (elapsedTickMs >= 25.0f) {
+                lastTickUpdateTime = current;
                 npc.updateLocation();
                 server.sendNPCinfo();
             }
-            if (elapsedThinkMilliSecs >= 250.0f)
-            {
-                lastThinkUpdateTime = currentTime;
-                bt.update(elapsedThinkMilliSecs);
+            if (elapsedThinkMs >= 250.0f) {
+                lastThinkUpdateTime = current;
+                bt.update(elapsedThinkMs);
             }
             Thread.yield();
         }
     }
 
-    public void setupBehaviorTree()
-    {
-        bt.insertAtRoot(new BTSequence(10));
-        bt.insertAtRoot(new BTSequence(20));
-        bt.insert(10, new OneSecPassed(this,npc,false));
-        bt.insert(10, new getSmall(npc));
-        bt.insert(20,new AvatarNear(server,this,npc,false));
-        bt.insert(20, new getBig(npc));
-        
-    }
+    // Near-flag accessors
+    public boolean getNearFlag() { return nearFlag; }
+    public void setNearFlag(boolean flag) { this.nearFlag = flag; }
 
-    public boolean getNearFlag() {
-        return this.nearFlag;
-    }
-    public void setNearFlag(boolean flag) {
-        this.nearFlag = flag;
-    }
-
-    public UUID getNpcID() { return npcID; }
-    public Vector3f getPosition() { return position; }
-    public double getSize() { return size; }
+    // Expose NPC info
+    public UUID getNpcID() { return npc.getId(); }
+    public Vector3f getPosition() { return npc.getPosition(); }
+    public double getSize() { return npc.getSize(); }
 }
