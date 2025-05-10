@@ -1,4 +1,5 @@
 import tage.ai.behaviortrees.BTAction;
+import tage.ai.behaviortrees.BTStatus;
 
 public class getSmall extends BTAction {
     private NPCcontroller ctrl;
@@ -9,10 +10,9 @@ public class getSmall extends BTAction {
     }
 
     @Override
-    public void run() {
-        ctrl.getPosition().normalize(); // example small action
-        // or set size small:
+    public BTStatus update(float elapsedTime) {
+        // set NPC size small
         ctrl.getNPC().setSize(0.5);
-        setSucceeded();
+        return BTStatus.BH_SUCCESS;
     }
 }

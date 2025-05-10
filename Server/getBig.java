@@ -1,4 +1,5 @@
 import tage.ai.behaviortrees.BTAction;
+import tage.ai.behaviortrees.BTStatus;
 
 public class getBig extends BTAction {
     private NPCcontroller ctrl;
@@ -9,9 +10,9 @@ public class getBig extends BTAction {
     }
 
     @Override
-    public void run() {
-        // set size big:
+    public BTStatus update(float elapsedTime) {
+        // set NPC size big
         ctrl.getNPC().setSize(2.0);
-        setSucceeded();
+        return BTStatus.BH_SUCCESS;
     }
 }
