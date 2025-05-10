@@ -3,12 +3,16 @@ package myGame;
 import java.awt.Color;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.UUID;
 import java.util.Vector;
 import org.joml.*;
 
 import tage.*;
+import tage.rml.Matrix4f;
+import tage.rml.Vector3f;
 
 public class GhostManager
 {
@@ -61,4 +65,15 @@ public class GhostManager
 		{	System.out.println("tried to update ghost avatar position, but unable to find ghost in list");
 		}
 	}
+
+	private Map<UUID, GhostNPC> ghostNPCs = new HashMap<>();
+    public void createGhostNPC(UUID id, Vector3f pos) {
+        GhostNPC npc = new GhostNPC(id, game.getNPCshape(), game.getNPCtexture(), pos);
+        ghostNPCs.put(id, npc);
+    }
+    public void updateGhostNPC(UUID id, Vector3f pos, double size) {
+        GhostNPC npc = ghostNPCs.get(id);
+        npc.setLocalTranslation(new Matrix4f().translation(pos));
+        npc.setSize((float)size);
+    }
 }
