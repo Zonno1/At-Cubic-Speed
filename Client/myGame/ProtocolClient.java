@@ -112,22 +112,23 @@ public class ProtocolClient extends GameConnectionClient
 
 
 			//------------Npc stuff---------------//
-			else if (messageTokens[0].equals("createNPC")) {
-				int id = Integer.parseInt(messageTokens[1]);
-				float x = Float.parseFloat(messageTokens[2]);
-				float y = Float.parseFloat(messageTokens[3]);
-				float z = Float.parseFloat(messageTokens[4]);
-				game.createGhostNPC(id, new Vector3f(x,y,z));
+			if (messageTokens[0].equals("createNPC")) {
+				Vector3f ghostPosition = new Vector3f(
+					Float.parseFloat(messageTokens[1]),
+					Float.parseFloat(messageTokens[2]),
+					Float.parseFloat(messageTokens[3]));
+				try{createGhostNPC(ghostPosition);}
+				catch(IOException e)
+				{System.out.println("error creating ghost npc");}
 			}
-			
 			else if (messageTokens[0].equals("npcinfo")) {
-				int id = Integer.parseInt(messageTokens[1]);
-				float x = Float.parseFloat(messageTokens[2]);
-				float y = Float.parseFloat(messageTokens[3]);
-				float z = Float.parseFloat(messageTokens[4]);
-				boolean big = Boolean.parseBoolean(messageTokens[5]);
-				game.updateGhostNPC(id, new Vector3f(x,y,z), big);
-			}
+				Vector3f ghostPosition = new Vector3f(
+					Float.parseFloat(messageTokens[1]),
+					Float.parseFloat(messageTokens[2]),
+					Float.parseFloat(messageTokens[3]));
+				boolean big = Boolean.parseBoolean(messageTokens[4]);
+				game.updateGhostNPC(ghostPosition, big);
+    }
 	
 		}	
 	}
@@ -207,7 +208,7 @@ public class ProtocolClient extends GameConnectionClient
 
 	//-----------------------Ghost Npc section--------------------------//
 
-	private void UpdateGhostNPC(Vector3f position) throws IOException
+	private void createGhostNPC(Vector3f position) throws IOException
 	{
 		if (ghostNPC == null)
 			ghostNPC = new GhostNPC(0, game.getNPCShape(), game.getNPCtexture(), position);
@@ -225,18 +226,5 @@ public class ProtocolClient extends GameConnectionClient
 		ghostNPC.setPosition(position);
 		if(gsize == 1.0) gs=false; else gs=true;
 		ghostNPC.setSize(gs);
-	}
-	//...
-
-	if(messageTokens[0].compareTo("createNPC")==0)
-	{
-		Vector3f ghostPosition = new Vector3f(
-			Float.parseFloat(messageTokens[1])), 
-			Float.parseFloat(messageTokens[2])), 
-			Float.parseFloat(messageTokens[3]));
-		try
-		{createGhostNPC(ghostPosition);}
-		catch (IOException e)
-		{System.out.println("Error creating ghost avatar");}
 	}
 }

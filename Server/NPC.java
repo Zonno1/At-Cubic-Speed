@@ -1,4 +1,5 @@
-
+import org.joml.*;
+import tage.rml.Vector3f;
 
 public class NPC 
 {
@@ -21,12 +22,20 @@ public class NPC
         locationZ = 2;
     }
 
+public Vector3f getPosition() {
+    float locX = (float)locationX;
+    float locY = (float)locationY;
+    float locZ = (float)locationZ;
+    return (Vector3f) Vector3f.createFrom(locX, locY, locZ);
+}
+
     public double getX() {return locationX;}
     public double getY() {return locationY;}
     public double getZ() {return locationZ;}
-    public void getBig() {size =2.0;}
+    public void getBig() {size = 2.0;}
     public void getSmall() {size = 1.0;}
     public double getSize() {return size;}
+    public void setSize(double s) {size = s;}
 
     public void updateLocation()
     {

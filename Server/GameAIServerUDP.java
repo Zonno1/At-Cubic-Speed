@@ -9,8 +9,9 @@ import tage.rml.Vector3f;
 public class GameAIServerUDP extends GameConnectionServer<UUID> {
     private NPCcontroller npcCtrl;
 
-    public GameAIServerUDP(int localPort, NPCcontroller npc) {
+    public GameAIServerUDP(int localPort, NPCcontroller npc) throws IOException {
         super(localPort, ProtocolType.UDP);
+        
         this.npcCtrl = npc;
     }
 
@@ -22,7 +23,7 @@ public class GameAIServerUDP extends GameConnectionServer<UUID> {
             double size = npcCtrl.getSize();
             String msg = String.format(
                 "npcinfo,%s,%.2f,%.2f,%.2f,%.2f",
-                id.toString(), pos.x, pos.y, pos.z, size
+                id.toString(), pos.x(), pos.y(), pos.z(), size
             );
             sendPacketToAll(msg);
         } catch (IOException e) {
@@ -36,7 +37,7 @@ public class GameAIServerUDP extends GameConnectionServer<UUID> {
             Vector3f pos = npcCtrl.getPosition();
             String msg = String.format(
                 "createNPC,%s,%.2f,%.2f,%.2f",
-                clientID.toString(), pos.x, pos.y, pos.z
+                clientID.toString(), pos.x(), pos.y(), pos.z()
             );
             sendPacketToAll(msg);
         } catch (IOException e) {
