@@ -1,9 +1,14 @@
+package mygame.net;
+
+import mygame.ai.NPCcontroller;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.UUID;
 
 import tage.networking.server.GameConnectionServer;
 import tage.networking.server.IClientInfo;
+import tage.rml.Vector3f;
 
 public class GameAIServerUDP extends GameConnectionServer<UUID> {
     NPCcontroller npcCtrl;
@@ -25,14 +30,24 @@ public class GameAIServerUDP extends GameConnectionServer<UUID> {
         { System.out.println("couldnt send msg"); e.printStackTrace(); }
     }
     
-    public void sendNPCinfo()
-    {
-
+    public void sendNPCinfo() {
+        // Broadcast NPC updates (position and size) every tick
+        UUID npcID = npcCtrl.getNpcID();
+        Vector3f pos = npcCtrl.getPosition();
+        double size = npcCtrl.getSize();
+        String info = String.format(
+            "npcinfo,%s,%.2f,%.2f,%.2f,%.2f",
+            npcID.toString(), pos.x, pos.y, pos.z, size);
+        forwardPacketToAll(info, null);
     }
 
-    public void sendNPCstart(UUID clientID)
-    {
-
+    public void sendNPCstart(UUID clientID) {
+        // Notify a new client to create the NPC at its initial position
+        UUID npcID = npcCtrl.getNpcID();
+        Vector3f pos = npcCtrl.getPosition();
+        String msg = String.format("createNPC,%s,%.2f,%.2f,%.2f",
+            npcID.toString(), pos.x, pos.y, pos.z);
+        forwardPacketTo(clientID, msg);
     }
 
     @Override
@@ -40,6 +55,10 @@ public class GameAIServerUDP extends GameConnectionServer<UUID> {
     {
         // Case where server receives request for NPCs
         // Received Message Format: (needNPC,id)
+        String strMessage = (String)o;
+		System.out.println("message received -->" + strMessage);
+		String[] messageTokens = strMessage.split(",");
+
         if(messageTokens[0].compareTo("needNPC") == 0)
         {   System.out.println("server got a needNPC message");
             UUID clientID = UUID.fromString(messageTokens[1]);

@@ -26,7 +26,7 @@ public class NPC
     public double getZ() {return locationZ;}
     public void getBig() {size =2.0;}
     public void getSmall() {size = 1.0;}
-    public double getSixe() {return size;}
+    public double getSize() {return size;}
 
     public void updateLocation()
     {

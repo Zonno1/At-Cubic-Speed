@@ -10,12 +10,15 @@ import org.joml.*;
 
 import tage.*;
 import tage.networking.client.GameConnectionClient;
+import tage.rml.Vector3f;
 
 public class ProtocolClient extends GameConnectionClient
 {
 	private MyGame game;
 	private GhostManager ghostManager;
 	private UUID id;
+
+	private GhostNPC ghostNPC;
 	
 	public ProtocolClient(InetAddress remoteAddr, int remotePort, ProtocolType protocolType, MyGame game) throws IOException 
 	{	super(remoteAddr, remotePort, protocolType);
@@ -105,7 +108,29 @@ public class ProtocolClient extends GameConnectionClient
 					Float.parseFloat(messageTokens[4]));
 				
 				ghostManager.updateGhostAvatar(ghostID, ghostPosition);
-	}	}	}
+			}
+
+
+			//------------Npc stuff---------------//
+			else if (messageTokens[0].equals("createNPC")) {
+				int id = Integer.parseInt(messageTokens[1]);
+				float x = Float.parseFloat(messageTokens[2]);
+				float y = Float.parseFloat(messageTokens[3]);
+				float z = Float.parseFloat(messageTokens[4]);
+				game.createGhostNPC(id, new Vector3f(x,y,z));
+			}
+			
+			else if (messageTokens[0].equals("npcinfo")) {
+				int id = Integer.parseInt(messageTokens[1]);
+				float x = Float.parseFloat(messageTokens[2]);
+				float y = Float.parseFloat(messageTokens[3]);
+				float z = Float.parseFloat(messageTokens[4]);
+				boolean big = Boolean.parseBoolean(messageTokens[5]);
+				game.updateGhostNPC(id, new Vector3f(x,y,z), big);
+			}
+	
+		}	
+	}
 	
 	// The initial message from the game client requesting to join the 
 	// server. localId is a unique identifier for the client. Recommend 
@@ -129,7 +154,7 @@ public class ProtocolClient extends GameConnectionClient
 		{	e.printStackTrace();
 	}	}
 	
-	// Informs the server of the client’s Avatar’s position. The server 
+	// Informs the server of the clientï¿½s Avatarï¿½s position. The server 
 	// takes this message and forwards it to all other clients registered 
 	// with the server.
 	// Message Format: (create,localId,x,y,z) where x, y, and z represent the position
@@ -178,4 +203,40 @@ public class ProtocolClient extends GameConnectionClient
 		} catch (IOException e) 
 		{	e.printStackTrace();
 	}	}
+
+
+	//-----------------------Ghost Npc section--------------------------//
+
+	private void UpdateGhostNPC(Vector3f position) throws IOException
+	{
+		if (ghostNPC == null)
+			ghostNPC = new GhostNPC(0, game.getNPCShape(), game.getNPCtexture(), position);
+	}
+
+	private void updateGhostNPC(Vector3f position, double gsize)
+	{
+		boolean gs;
+		if(ghostNPC == null)
+		{	try
+			{createGhostNPC(position);}
+			catch(IOException e)
+			{System.out.println("error creating npc");}
+		}
+		ghostNPC.setPosition(position);
+		if(gsize == 1.0) gs=false; else gs=true;
+		ghostNPC.setSize(gs);
+	}
+	//...
+
+	if(messageTokens[0].compareTo("createNPC")==0)
+	{
+		Vector3f ghostPosition = new Vector3f(
+			Float.parseFloat(messageTokens[1])), 
+			Float.parseFloat(messageTokens[2])), 
+			Float.parseFloat(messageTokens[3]));
+		try
+		{createGhostNPC(ghostPosition);}
+		catch (IOException e)
+		{System.out.println("Error creating ghost avatar");}
+	}
 }

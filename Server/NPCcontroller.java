@@ -1,8 +1,15 @@
+package mygame.ai;
+
 import java.util.Random;
 
 import tage.ai.behaviortrees.BTCompositeType;
 import tage.ai.behaviortrees.BTSequence;
 import tage.ai.behaviortrees.BehaviorTree;
+import java.util.UUID;
+import org.joml.Vector3f;
+import mygame.behaviortrees.OneSecPassed;
+import mygame.behaviortrees.getSmall;
+import mygame.behaviortrees.getBig;
 
 public class NPCcontroller
 {
@@ -13,6 +20,16 @@ public class NPCcontroller
     long thinkStartTime, tickStartTime;
     GameAIServerUDP server;
     double criteria = 2.0;
+
+    private UUID npcID;
+    private Vector3f position;
+    private double size;
+
+    // Tick & think timestamps
+    private long lastThinkUpdateTime;
+    private long lastTickUpdateTime;
+
+
 
     public void updateNPCs()
     {
@@ -71,4 +88,15 @@ public class NPCcontroller
         bt.insert(20, new getBig(npc));
         
     }
+
+    public boolean getNearFlag() {
+        return this.nearFlag;
+    }
+    public void setNearFlag(boolean flag) {
+        this.nearFlag = flag;
+    }
+
+    public UUID getNpcID() { return npcID; }
+    public Vector3f getPosition() { return position; }
+    public double getSize() { return size; }
 }

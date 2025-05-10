@@ -1,23 +1,22 @@
 
 import tage.ai.behaviortrees.BTCondition;
+package mygame.ai;
+
+import mygame.ai.NPCcontroller;
 
 public class AvatarNear extends BTCondition {
     NPC npc;
     NPCcontroller npcc;
     GameAIServerUDP server;
 
-    public AvatarNear(GameAIServerUDP s, NPCcontroller c, NPC n, boolean toNegate)
-    {
-        super(toNegate);
-        server = s; 
-        npcc = c; 
-        npc = n;
+public AvatarNear(NPCcontroller npcController) {
+        this.npcc = npcController;
     }
 
-    protected boolean check()
-    {
-        server.sendCheckForAvatarNear();
+    public boolean isAvatarNear() {
+        // Use the new getter on NPCcontroller
         return npcc.getNearFlag();
     }
-    
 }
+    
+

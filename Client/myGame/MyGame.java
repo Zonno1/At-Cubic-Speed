@@ -23,6 +23,9 @@ import net.java.games.input.*;
 import net.java.games.input.Component.Identifier.*;
 import tage.networking.IGameConnection.ProtocolType;
 import tage.rml.Matrix4;
+import tage.rml.Matrix4f;
+import tage.rml.Vector3f;
+import tage.rml.Vector4f;
 import tage.audio.*;
 
 import tage.physics.JBullet.*;
@@ -61,9 +64,14 @@ public class MyGame extends VariableFrameRateGame
 	private Sound hereSound, oceanSound;
 	private boolean running = false;
 	private float vals[] = new float[16];
+
+	private ObjShape npcShape;
+	private TextureImage npcTex;
+	private UUID clientID;
+
 	
 
-	public MyGame(String serverAddress, int serverPort, String protocol)
+	public MyGame (String serverAddress, int serverPort, String protocol)
 	{	super();
 		gm = new GhostManager(this);
 		this.serverAddress = serverAddress;
@@ -111,7 +119,7 @@ public class MyGame extends VariableFrameRateGame
 	@Override
 	public void loadShapes()
 	{	
-		
+		//super.loadShapes();
 		robS = new AnimatedShape("spike ball.rkm", "spike ball.rks");
 		robS.loadAnimation("WAVE", "spike ball.rka");
 		terrS = new TerrainPlane(1000);
@@ -122,22 +130,30 @@ public class MyGame extends VariableFrameRateGame
 		linxS = new Line(new Vector3f(0f,0f,0f), new Vector3f(3f,0f,0f));
 		linyS = new Line(new Vector3f(0f,0f,0f), new Vector3f(0f,3f,0f));
 		linzS = new Line(new Vector3f(0f,0f,0f), new Vector3f(0f,0f,-3f));
+
+		npcShape = new ImportedModel("cone.obj");
 	}
 
 	@Override
 	public void loadTextures()
 	{	
+		//super.loadTextures();
 		robottx = new TextureImage("spikeBallUV.png");
 		hills = new TextureImage("dirt.png");
 		grass = new TextureImage("grass.jpg");
 		doltx = new TextureImage("Dolphin_HighPolyUV.png");
 		ghostT = new TextureImage("redDolphin.jpg");
 		torX = new TextureImage("spikeTrapUV.png");
+		npcTex = new TextureImage("redDolphin.jpg");
 	}
 
 	@Override
 	public void buildObjects()
-	{	Matrix4f initialTranslation, initialRotation, initialScale;
+	{	
+		//super.buildObjects();
+
+
+		Matrix4f initialTranslation, initialRotation, initialScale;
 
 		//build physics dolphins
 		dol1 = new GameObject(GameObject.root(), dolS, doltx);
@@ -199,6 +215,11 @@ public class MyGame extends VariableFrameRateGame
 		(x.getRenderStates()).setColor(new Vector3f(1f,0f,0f));
 		(y.getRenderStates()).setColor(new Vector3f(0f,1f,0f));
 		(z.getRenderStates()).setColor(new Vector3f(0f,0f,1f));
+
+		//npc
+		GameObject npcGO = new GameObject(GameObject.root(), npcShape, npcTex);
+    	npcGO.setLocalTranslation(new Matrix4f().translation(0,0,-5));
+    	npcGO.setLocalScale(new Matrix4f().scaling(0.5f));
 	}
 
 	@Override
@@ -213,6 +234,8 @@ public class MyGame extends VariableFrameRateGame
 	@Override
 	public void initializeGame()
 	{	
+		//super.initializeGame();
+
 		float[]gravity = {0f, .5f, 0f};
 		physicsEngine = (engine.getSceneGraph()).getPhysicsEngine();
 		physicsEngine.setGravity(gravity);
@@ -288,6 +311,11 @@ public class MyGame extends VariableFrameRateGame
 			turnAction, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
 
 		setupNetworking();
+
+		//----------Npc stuff--------//
+		clientID = getClientID(); // however you obtain it
+	    protClient.sendPacket("needNPC," + clientID.toString());
+		
 	}
 
 	public void setEarParameters()
@@ -489,6 +517,7 @@ public class MyGame extends VariableFrameRateGame
 	public GhostManager getGhostManager() { return gm; }
 	public Engine getEngine() { return engine; }
 	
+	
 	private void setupNetworking()
 	{	isClientConnected = false;	
 		try 
@@ -526,4 +555,8 @@ public class MyGame extends VariableFrameRateGame
 			}
 		}
 	}
+
+	//-----------------Npc stuff--------------//
+		public ObjShape getNPCshape() { return npcShape; }
+	    public TextureImage getNPCtexture() { return npcTex; }
 }
