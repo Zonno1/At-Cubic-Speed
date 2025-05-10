@@ -39,7 +39,7 @@ public class GameAIServerUDP extends GameConnectionServer<UUID> {
                 "createNPC,%s,%.2f,%.2f,%.2f",
                 clientID.toString(), pos.x(), pos.y(), pos.z()
             );
-            sendPacketToAll(msg);
+            sendPacket(msg, clientID);
         } catch (IOException e) {
             e.printStackTrace();
         }

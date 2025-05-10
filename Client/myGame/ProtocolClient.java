@@ -1,230 +1,211 @@
 package myGame;
 
-import java.awt.Color;
 import java.io.IOException;
 import java.net.InetAddress;
-import java.util.Iterator;
 import java.util.UUID;
-import java.util.Vector;
-import org.joml.*;
 
 import tage.*;
 import tage.networking.client.GameConnectionClient;
 import tage.rml.Vector3f;
 
-public class ProtocolClient extends GameConnectionClient
-{
+public class ProtocolClient extends GameConnectionClient {
 	private MyGame game;
 	private GhostManager ghostManager;
 	private UUID id;
 
 	private GhostNPC ghostNPC;
-	
-	public ProtocolClient(InetAddress remoteAddr, int remotePort, ProtocolType protocolType, MyGame game) throws IOException 
-	{	super(remoteAddr, remotePort, protocolType);
+
+	public ProtocolClient(InetAddress remoteAddr, int remotePort, ProtocolType protocolType, MyGame game)
+			throws IOException {
+		super(remoteAddr, remotePort, protocolType);
 		this.game = game;
 		this.id = UUID.randomUUID();
 		ghostManager = game.getGhostManager();
 	}
-	
-	public UUID getID() { return id; }
-	
+
+	public UUID getID() {
+		return id;
+	}
+
 	@Override
-	protected void processPacket(Object message)
-	{	String strMessage = (String)message;
+	protected void processPacket(Object message) {
+		String strMessage = (String) message;
 		System.out.println("message received -->" + strMessage);
 		String[] messageTokens = strMessage.split(",");
-		
-		// Game specific protocol to handle the message
-		if(messageTokens.length > 0)
-		{
-			// Handle JOIN message
-			// Format: (join,success) or (join,failure)
-			if(messageTokens[0].compareTo("join") == 0)
-			{	if(messageTokens[1].compareTo("success") == 0)
-				{	System.out.println("join success confirmed");
-					game.setIsConnected(true);
-					sendCreateMessage(game.getPlayerPosition());
+
+		if (messageTokens.length > 0) {
+			switch (messageTokens[0]) {
+				case "join":
+					if (messageTokens[1].equals("success")) {
+						System.out.println("join success confirmed");
+						game.setIsConnected(true);
+						sendCreateMessage(game.getPlayerPosition());
+
+						if (messageTokens[0].equals("join") && messageTokens[1].equals("success")) {
+							System.out.println("Join success confirmed");
+							game.setIsConnected(true);
+							sendCreateMessage(game.getPlayerPosition());
+
+							// ✅ Send NPC request after successful join
+							try {
+								sendPacket("needNPC," + id.toString());
+								System.out.println("Sent needNPC message with client ID: " + id);
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
+						}
+
+					} else {
+						System.out.println("join failure confirmed");
+						game.setIsConnected(false);
+					}
+					break;
+
+				case "bye":
+					UUID ghostID = UUID.fromString(messageTokens[1]);
+					ghostManager.removeGhostAvatar(ghostID);
+					break;
+
+				case "create":
+				case "dsfr":
+					UUID ghostID2 = UUID.fromString(messageTokens[1]);
+					org.joml.Vector3f ghostPosition = new org.joml.Vector3f(
+							Float.parseFloat(messageTokens[2]),
+							Float.parseFloat(messageTokens[3]),
+							Float.parseFloat(messageTokens[4]));
+					try {
+						ghostManager.createGhostAvatar(ghostID2, ghostPosition);
+					} catch (IOException e) {
+						System.out.println("error creating ghost avatar");
+					}
+					break;
+
+				case "wsds":
+					UUID ghostID3 = UUID.fromString(messageTokens[1]);
+					sendDetailsForMessage(ghostID3, game.getPlayerPosition());
+					break;
+
+				case "move":
+					UUID ghostID4 = UUID.fromString(messageTokens[1]);
+					org.joml.Vector3f movePosition = new org.joml.Vector3f(
+							Float.parseFloat(messageTokens[2]),
+							Float.parseFloat(messageTokens[3]),
+							Float.parseFloat(messageTokens[4]));
+					ghostManager.updateGhostAvatar(ghostID4, movePosition);
+					break;
+
+				case "createNPC": {
+					org.joml.Vector3f npcPos = new org.joml.Vector3f(
+							Float.parseFloat(messageTokens[1]),
+							Float.parseFloat(messageTokens[2]),
+							Float.parseFloat(messageTokens[3]));
+					System.out.println("Processing NPC creation with position: x=" 
+    + npcPos.x() + ", y=" + npcPos.y() + ", z=" + npcPos.z());
+					try {
+						createGhostNPC(npcPos);
+					} catch (IOException e) {
+						System.out.println("error creating ghost npc");
+					}
+					break;
 				}
-				if(messageTokens[1].compareTo("failure") == 0)
-				{	System.out.println("join failure confirmed");
-					game.setIsConnected(false);
-			}	}
-			
-			// Handle BYE message
-			// Format: (bye,remoteId)
-			if(messageTokens[0].compareTo("bye") == 0)
-			{	// remove ghost avatar with id = remoteId
-				// Parse out the id into a UUID
-				UUID ghostID = UUID.fromString(messageTokens[1]);
-				ghostManager.removeGhostAvatar(ghostID);
-			}
-			
-			// Handle CREATE message
-			// Format: (create,remoteId,x,y,z)
-			// AND
-			// Handle DETAILS_FOR message
-			// Format: (dsfr,remoteId,x,y,z)
-			if (messageTokens[0].compareTo("create") == 0 || (messageTokens[0].compareTo("dsfr") == 0))
-			{	// create a new ghost avatar
-				// Parse out the id into a UUID
-				UUID ghostID = UUID.fromString(messageTokens[1]);
-				
-				// Parse out the position into a Vector3f
-				Vector3f ghostPosition = new Vector3f(
-					Float.parseFloat(messageTokens[2]),
-					Float.parseFloat(messageTokens[3]),
-					Float.parseFloat(messageTokens[4]));
 
-				try
-				{	ghostManager.createGhostAvatar(ghostID, ghostPosition);
-				}	catch (IOException e)
-				{	System.out.println("error creating ghost avatar");
+				case "npcinfo": {
+					org.joml.Vector3f npcPos = new org.joml.Vector3f(
+							Float.parseFloat(messageTokens[1]),
+							Float.parseFloat(messageTokens[2]),
+							Float.parseFloat(messageTokens[3]));
+					System.out.println("Processing current NPC position: " + npcPos);
+					boolean big = Boolean.parseBoolean(messageTokens[4]);
+					updateGhostNPC(npcPos, big);
+					break;
 				}
 			}
-			
-			// Handle WANTS_DETAILS message
-			// Format: (wsds,remoteId)
-			if (messageTokens[0].compareTo("wsds") == 0)
-			{
-				// Send the local client's avatar's information
-				// Parse out the id into a UUID
-				UUID ghostID = UUID.fromString(messageTokens[1]);
-				sendDetailsForMessage(ghostID, game.getPlayerPosition());
-			}
-			
-			// Handle MOVE message
-			// Format: (move,remoteId,x,y,z)
-			if (messageTokens[0].compareTo("move") == 0)
-			{
-				// move a ghost avatar
-				// Parse out the id into a UUID
-				UUID ghostID = UUID.fromString(messageTokens[1]);
-				
-				// Parse out the position into a Vector3f
-				Vector3f ghostPosition = new Vector3f(
-					Float.parseFloat(messageTokens[2]),
-					Float.parseFloat(messageTokens[3]),
-					Float.parseFloat(messageTokens[4]));
-				
-				ghostManager.updateGhostAvatar(ghostID, ghostPosition);
-			}
-
-
-			//------------Npc stuff---------------//
-			if (messageTokens[0].equals("createNPC")) {
-				Vector3f ghostPosition = new Vector3f(
-					Float.parseFloat(messageTokens[1]),
-					Float.parseFloat(messageTokens[2]),
-					Float.parseFloat(messageTokens[3]));
-				try{createGhostNPC(ghostPosition);}
-				catch(IOException e)
-				{System.out.println("error creating ghost npc");}
-			}
-			else if (messageTokens[0].equals("npcinfo")) {
-				Vector3f ghostPosition = new Vector3f(
-					Float.parseFloat(messageTokens[1]),
-					Float.parseFloat(messageTokens[2]),
-					Float.parseFloat(messageTokens[3]));
-				boolean big = Boolean.parseBoolean(messageTokens[4]);
-				game.updateGhostNPC(ghostPosition, big);
-    }
-	
-		}	
-	}
-	
-	// The initial message from the game client requesting to join the 
-	// server. localId is a unique identifier for the client. Recommend 
-	// a random UUID.
-	// Message Format: (join,localId)
-	
-	public void sendJoinMessage()
-	{	try 
-		{	sendPacket(new String("join," + id.toString()));
-		} catch (IOException e) 
-		{	e.printStackTrace();
-	}	}
-	
-	// Informs the server that the client is leaving the server. 
-	// Message Format: (bye,localId)
-
-	public void sendByeMessage()
-	{	try 
-		{	sendPacket(new String("bye," + id.toString()));
-		} catch (IOException e) 
-		{	e.printStackTrace();
-	}	}
-	
-	// Informs the server of the client�s Avatar�s position. The server 
-	// takes this message and forwards it to all other clients registered 
-	// with the server.
-	// Message Format: (create,localId,x,y,z) where x, y, and z represent the position
-
-	public void sendCreateMessage(Vector3f position)
-	{	try 
-		{	String message = new String("create," + id.toString());
-			message += "," + position.x();
-			message += "," + position.y();
-			message += "," + position.z();
-			
-			sendPacket(message);
-		} catch (IOException e) 
-		{	e.printStackTrace();
-	}	}
-	
-	// Informs the server of the local avatar's position. The server then 
-	// forwards this message to the client with the ID value matching remoteId. 
-	// This message is generated in response to receiving a WANTS_DETAILS message 
-	// from the server.
-	// Message Format: (dsfr,remoteId,localId,x,y,z) where x, y, and z represent the position.
-
-	public void sendDetailsForMessage(UUID remoteId, Vector3f position)
-	{	try 
-		{	String message = new String("dsfr," + remoteId.toString() + "," + id.toString());
-			message += "," + position.x();
-			message += "," + position.y();
-			message += "," + position.z();
-			
-			sendPacket(message);
-		} catch (IOException e) 
-		{	e.printStackTrace();
-	}	}
-	
-	// Informs the server that the local avatar has changed position.  
-	// Message Format: (move,localId,x,y,z) where x, y, and z represent the position.
-
-	public void sendMoveMessage(Vector3f position)
-	{	try 
-		{	String message = new String("move," + id.toString());
-			message += "," + position.x();
-			message += "," + position.y();
-			message += "," + position.z();
-			
-			sendPacket(message);
-		} catch (IOException e) 
-		{	e.printStackTrace();
-	}	}
-
-
-	//-----------------------Ghost Npc section--------------------------//
-
-	private void createGhostNPC(Vector3f position) throws IOException
-	{
-		if (ghostNPC == null)
-			ghostNPC = new GhostNPC(0, game.getNPCShape(), game.getNPCtexture(), position);
+		}
 	}
 
-	private void updateGhostNPC(Vector3f position, double gsize)
-	{
-		boolean gs;
-		if(ghostNPC == null)
-		{	try
-			{createGhostNPC(position);}
-			catch(IOException e)
-			{System.out.println("error creating npc");}
+	public void sendJoinMessage() {
+		try {
+			sendPacket("join," + id.toString());
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void sendByeMessage() {
+		try {
+			sendPacket("bye," + id.toString());
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void sendCreateMessage(org.joml.Vector3f position) {
+		try {
+			String message = "create," + id.toString() + "," +
+					position.x() + "," + position.y() + "," + position.z();
+			sendPacket(message);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void sendDetailsForMessage(UUID remoteId, org.joml.Vector3f position) {
+		try {
+			String message = "dsfr," + remoteId.toString() + "," + id.toString() + "," +
+					position.x() + "," + position.y() + "," + position.z();
+			sendPacket(message);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void sendMoveMessage(org.joml.Vector3f position) {
+		try {
+			String message = "move," + id.toString() + "," +
+					position.x() + "," + position.y() + "," + position.z();
+			sendPacket(message);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	// ---- Ghost NPC Section ----
+
+	private void createGhostNPC(org.joml.Vector3f position) throws IOException {
+		if (ghostNPC == null) {
+        ghostNPC = new GhostNPC(UUID.randomUUID(), game.getNPCShape(), game.getNPCtexture(), position);
+        //game.getEngine().getSceneGraph().addGameObject(ghostNPC);
+        System.out.println("GhostNPC created and added to scene");
+	}
+}
+
+	private void updateGhostNPC(org.joml.Vector3f position, boolean big) {
+		if (ghostNPC == null) {
+			try {
+				System.out.println("GhostNPC updated");
+				createGhostNPC(position);
+				
+			} catch (IOException e) {
+				System.out.println("error creating npc");
+			}
 		}
 		ghostNPC.setPosition(position);
-		if(gsize == 1.0) gs=false; else gs=true;
-		ghostNPC.setSize(gs);
+		float size = big ? 1.5f : 0.5f;
+		ghostNPC.setSize(size);
 	}
+
+	public void sendIsNear() {
+    try {
+        sendPacket("isnear," + id.toString());
+        System.out.println("Sent isnear message to server");
+    } catch (IOException e) {
+        e.printStackTrace();
+    }
+}
+
+public GhostNPC getGhostNPC() {
+    return ghostNPC;
+}
+
+
 }

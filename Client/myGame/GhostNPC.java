@@ -4,10 +4,9 @@ import tage.GameObject;
 import tage.ObjShape;
 import tage.TextureImage;
 import org.joml.Vector3f;
+import org.joml.Matrix4f;
 
 import java.util.UUID;
-
-import org.joml.Matrix4f;
 
 public class GhostNPC extends GameObject 
 {
@@ -17,7 +16,14 @@ public class GhostNPC extends GameObject
     }
 
     public void setSize(float s) {
-       setLocalScale(new Matrix4f().scaling(s));
-     }
+        setLocalScale(new Matrix4f().scaling(s));
+    }
 
+    public void setPosition(Vector3f p) {
+        setLocalTranslation(new Matrix4f().translation(p));
+    }
+
+    public org.joml.Vector3f getPosition() {
+    return getWorldLocation(); // or getLocalLocation() if you're only using local transforms
+}
 }

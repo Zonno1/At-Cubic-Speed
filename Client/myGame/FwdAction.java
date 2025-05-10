@@ -9,8 +9,8 @@ public class FwdAction extends AbstractInputAction
 {
 	private MyGame game;
 	private GameObject av;
-	private Vector3f oldPosition, newPosition;
-	private Vector4f fwdDirection;
+	private org.joml.Vector3f oldPosition, newPosition;
+	private org.joml.Vector4f fwdDirection;
 	private ProtocolClient protClient;
 
 	public FwdAction(MyGame g, ProtocolClient p)
