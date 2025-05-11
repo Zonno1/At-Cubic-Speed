@@ -5,37 +5,27 @@ public class NetworkingServer
 {
 	private GameAIServerUDP UDPServer;
 	private NPCcontroller npcCtrl;
-	private GameServerUDP thisUDPServer;
-	private GameServerTCP thisTCPServer;
+	//private GameServerUDP thisUDPserver;
 
-	public NetworkingServer(int serverPort, String protocol) 
+	public NetworkingServer(int serverPort) //removed protocol
 	{	
 		npcCtrl = new NPCcontroller();
 		// start networking server
 		try
-		{ UDPServer = new GameAIServerUDP(serverPort, npcCtrl); }
+		{ 
+			UDPServer = new GameAIServerUDP(serverPort, npcCtrl); 
+			//thisUDPServer = newGameServerUDP(serverPort);
+		}
 		catch (IOException e)
-		{ 	System.out.println("server didn't start"); e.printStackTrace(); }
+		{ 
+			System.out.println("server didn't start"); e.printStackTrace(); 
+		}
 		npcCtrl.start(UDPServer);
-
-
-		try 
-		{	if(protocol.toUpperCase().compareTo("TCP") == 0)
-			{	thisTCPServer = new GameServerTCP(serverPort);
-			}
-			else
-			{	thisUDPServer = new GameServerUDP(serverPort);
-			}
-		} 
-		catch (IOException e) 
-		{	e.printStackTrace();
-		}
 	}
-
-	public static void main(String[] args) 
-	{	if(args.length > 1)
-		{	NetworkingServer app = new NetworkingServer(Integer.parseInt(args[0]), args[1]);
-		}
+	public static void main(String[] args)
+	{ 
+		if(args.length == 1)
+		{ NetworkingServer app = new NetworkingServer(Integer.parseInt(args[0])); }
 	}
 
 }

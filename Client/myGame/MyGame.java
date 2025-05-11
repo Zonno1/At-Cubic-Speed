@@ -39,7 +39,7 @@ public class MyGame extends VariableFrameRateGame
 
 	private int counter=0;
 	private Vector3f currentPosition;
-	private Matrix4f initialTranslation, initialRotation, initialScale;
+	private org.joml.Matrix4f initialTranslation, initialRotation, initialScale;
 	private double startTime, prevTime, elapsedTime, amt;
 
 	private GameObject tor, avatar, x, y, z, robot, terr, water, dol1, dol2;
@@ -61,21 +61,23 @@ public class MyGame extends VariableFrameRateGame
 	private Sound hereSound, oceanSound;
 	private boolean running = false;
 	private float vals[] = new float[16];
+
+	private ObjShape npcShape;
+	private TextureImage npcTex;
+	public ObjShape getNPCshape() { return npcShape; }
+	public TextureImage getNPCtexture() { return npcTex; }
 	
 
-	public MyGame(String serverAddress, int serverPort, String protocol)
+	public MyGame(String serverAddress, int serverPort)
 	{	super();
 		gm = new GhostManager(this);
 		this.serverAddress = serverAddress;
 		this.serverPort = serverPort;
-		if (protocol.toUpperCase().compareTo("TCP") == 0)
-			this.serverProtocol = ProtocolType.TCP;
-		else
-			this.serverProtocol = ProtocolType.UDP;
+		this.serverProtocol = ProtocolType.UDP;
 	}
 
 	public static void main(String[] args)
-	{	MyGame game = new MyGame(args[0], Integer.parseInt(args[1]), args[2]);
+	{	MyGame game = new MyGame(args[0], Integer.parseInt(args[1]));
 		engine = new Engine(game);
 		game.initializeSystem();
 		game.game_loop();
@@ -119,9 +121,10 @@ public class MyGame extends VariableFrameRateGame
 		torS = new ImportedModel("spikeTrap.obj");
 		ghostS = new Sphere();
 		dolS = new ImportedModel("dolphinHighPoly.obj");
-		linxS = new Line(new Vector3f(0f,0f,0f), new Vector3f(3f,0f,0f));
-		linyS = new Line(new Vector3f(0f,0f,0f), new Vector3f(0f,3f,0f));
-		linzS = new Line(new Vector3f(0f,0f,0f), new Vector3f(0f,0f,-3f));
+		linxS = new Line(new org.joml.Vector3f(0f,0f,0f), new org.joml.Vector3f(3f,0f,0f));
+		linyS = new Line(new org.joml.Vector3f(0f,0f,0f), new org.joml.Vector3f(0f,3f,0f));
+		linzS = new Line(new org.joml.Vector3f(0f,0f,0f), new org.joml.Vector3f(0f,0f,-3f));
+		npcShape = new ImportedModel("dolphinHighPoly.obj");
 	}
 
 	@Override
@@ -133,46 +136,47 @@ public class MyGame extends VariableFrameRateGame
 		doltx = new TextureImage("Dolphin_HighPolyUV.png");
 		ghostT = new TextureImage("redDolphin.jpg");
 		torX = new TextureImage("spikeTrapUV.png");
+		npcTex = ghostT = new TextureImage("redDolphin.jpg");
 	}
 
 	@Override
 	public void buildObjects()
-	{	Matrix4f initialTranslation, initialRotation, initialScale;
+	{	org.joml.Matrix4f initialTranslation, initialRotation, initialScale;
 
 		//build physics dolphins
 		dol1 = new GameObject(GameObject.root(), dolS, doltx);
-		initialTranslation = (new Matrix4f()).translation(1,1.5f,3);
+		initialTranslation = (new org.joml.Matrix4f()).translation(1,1.5f,3);
 		dol1.setLocalTranslation(initialTranslation);
-		initialScale = (new Matrix4f()).scaling(2f);
+		initialScale = (new org.joml.Matrix4f()).scaling(2f);
 		dol1.setLocalScale(initialScale);
-		dol1.getRenderStates().setModelOrientationCorrection((new Matrix4f()).rotationY((float)java.lang.Math.toRadians(270.0f)));
+		dol1.getRenderStates().setModelOrientationCorrection((new org.joml.Matrix4f()).rotationY((float)java.lang.Math.toRadians(270.0f)));
 
 		dol2 = new GameObject(GameObject.root(), dolS, doltx);
-		initialTranslation =(new Matrix4f()).translation(1,1,3);
+		initialTranslation =(new org.joml.Matrix4f()).translation(1,1,3);
 		dol2.setLocalTranslation(initialTranslation);
-		initialScale = (new Matrix4f()).scaling(2f);
+		initialScale = (new org.joml.Matrix4f()).scaling(2f);
 		dol1.setLocalScale(initialScale);
-		dol2.getRenderStates().setModelOrientationCorrection((new Matrix4f()).rotationY((float)java.lang.Math.toRadians(90.0f)));
+		dol2.getRenderStates().setModelOrientationCorrection((new org.joml.Matrix4f()).rotationY((float)java.lang.Math.toRadians(90.0f)));
 
 
 
 		// Build Robot
 		robot = new GameObject(GameObject.root(), robS, robottx);
-		initialTranslation = (new Matrix4f()).translation(0, robotHeightAdjust,0);
+		initialTranslation = (new org.joml.Matrix4f()).translation(0, robotHeightAdjust,0);
 		robot.setLocalTranslation(initialTranslation);
-		initialRotation = (new Matrix4f()).rotationY((float)java.lang.Math.toRadians(180.0f));
+		initialRotation = (new org.joml.Matrix4f()).rotationY((float)java.lang.Math.toRadians(180.0f));
 		robot.setLocalRotation(initialRotation);
-		initialScale = (new Matrix4f()).scaling(0.2f, 0.2f, 0.2f);
+		initialScale = (new org.joml.Matrix4f()).scaling(0.2f, 0.2f, 0.2f);
 		robot.setLocalScale(initialScale);
-		robot.getRenderStates().setModelOrientationCorrection((new Matrix4f()).rotationY((float)java.lang.Math.toRadians(90.0f)));
+		robot.getRenderStates().setModelOrientationCorrection((new org.joml.Matrix4f()).rotationY((float)java.lang.Math.toRadians(90.0f)));
 		robot.getRenderStates().hasLighting(true);
 		robot.getRenderStates().isEnvironmentMapped(true);
 
 		//build terrain
 		terr = new GameObject(GameObject.root(),terrS, grass);
-		initialTranslation = (new Matrix4f()).translation(0f,0f,0f);
+		initialTranslation = (new org.joml.Matrix4f()).translation(0f,0f,0f);
 		terr.setLocalTranslation(initialTranslation);
-		initialScale = (new Matrix4f()).scaling(20.0f, 1f, 20.0f);
+		initialScale = (new org.joml.Matrix4f()).scaling(20.0f, 1f, 20.0f);
 		terr.setLocalScale(initialScale);
 		terr.setHeightMap(hills);
 		terr.getRenderStates().setTiling(1);
@@ -180,25 +184,25 @@ public class MyGame extends VariableFrameRateGame
 
 		// build dolphin avatar
 		avatar = new GameObject(GameObject.root(), dolS, doltx);
-		initialTranslation = (new Matrix4f()).translation(-1f,0f,1f);
+		initialTranslation = (new org.joml.Matrix4f()).translation(-1f,0f,1f);
 		avatar.setLocalTranslation(initialTranslation);
-		initialRotation = (new Matrix4f()).rotationY((float)java.lang.Math.toRadians(135.0f));
+		initialRotation = (new org.joml.Matrix4f()).rotationY((float)java.lang.Math.toRadians(135.0f));
 		avatar.setLocalRotation(initialRotation);
 
 		// build torus along X axis
 		tor = new GameObject(GameObject.root(), torS, torX);
-		initialTranslation = (new Matrix4f()).translation(1,4,3);
+		initialTranslation = (new org.joml.Matrix4f()).translation(1,4,3);
 		tor.setLocalTranslation(initialTranslation);
-		initialScale = (new Matrix4f()).scaling(.5f);
+		initialScale = (new org.joml.Matrix4f()).scaling(.5f);
 		tor.setLocalScale(initialScale);
 
 		// add X,Y,-Z axes
 		x = new GameObject(GameObject.root(), linxS);
 		y = new GameObject(GameObject.root(), linyS);
 		z = new GameObject(GameObject.root(), linzS);
-		(x.getRenderStates()).setColor(new Vector3f(1f,0f,0f));
-		(y.getRenderStates()).setColor(new Vector3f(0f,1f,0f));
-		(z.getRenderStates()).setColor(new Vector3f(0f,0f,1f));
+		(x.getRenderStates()).setColor(new org.joml.Vector3f(1f,0f,0f));
+		(y.getRenderStates()).setColor(new org.joml.Vector3f(0f,1f,0f));
+		(z.getRenderStates()).setColor(new org.joml.Vector3f(0f,0f,1f));
 	}
 
 	@Override
@@ -206,7 +210,7 @@ public class MyGame extends VariableFrameRateGame
 	{	Light.setGlobalAmbient(.5f, .5f, .5f);
 
 		light = new Light();
-		light.setLocation(new Vector3f(0f, 5f, 0f));
+		light.setLocation(new org.joml.Vector3f(0f, 5f, 0f));
 		(engine.getSceneGraph()).addLight(light);
 	}
 
@@ -224,7 +228,7 @@ public class MyGame extends VariableFrameRateGame
 		float height = 2.0f;
 		double[] tempTransform;
 
-		Matrix4f translation = new Matrix4f(dol1.getLocalTranslation());
+		org.joml.Matrix4f translation = new org.joml.Matrix4f(dol1.getLocalTranslation());
 		tempTransform = toDoubleArray(translation.get(vals));
 		caps1p = (engine.getSceneGraph()).addPhysicsCapsuleX(mass, tempTransform, radius, height);
 
@@ -232,7 +236,7 @@ public class MyGame extends VariableFrameRateGame
 		dol1.setPhysicsObject(caps1p);
 
 
-		translation = new Matrix4f(dol2.getLocalTranslation());
+		translation = new org.joml.Matrix4f(dol2.getLocalTranslation());
 		tempTransform = toDoubleArray(translation.get(vals));
 		caps2p = (engine.getSceneGraph()).addPhysicsCapsuleX(mass, tempTransform, radius, height);
 
@@ -240,14 +244,14 @@ public class MyGame extends VariableFrameRateGame
 		dol2.setPhysicsObject(caps2p);
 
 		
-		translation = new Matrix4f(tor.getLocalTranslation());
+		translation = new org.joml.Matrix4f(tor.getLocalTranslation());
 		tempTransform = toDoubleArray(translation.get(vals));
 		caps3p = (engine.getSceneGraph()).addPhysicsCapsuleX(0, tempTransform, radius, height);
 
 		caps3p.setBounciness(0.5f);
 		tor.setPhysicsObject(caps3p);
 
-		translation = new Matrix4f(terr.getLocalTranslation());
+		translation = new org.joml.Matrix4f(terr.getLocalTranslation());
 		tempTransform = toDoubleArray(translation.get(vals));
 		planeP = (engine.getSceneGraph()).addPhysicsStaticPlane(tempTransform, up, 0.0f);
 		planeP.setBounciness(0.5f);
@@ -294,7 +298,7 @@ public class MyGame extends VariableFrameRateGame
 	{
 		Camera camera = (engine.getRenderSystem()).getViewport("MAIN").getCamera();
 		audioMgr.getEar().setLocation(avatar.getWorldLocation());
-		audioMgr.getEar().setOrientation(camera.getN(),new Vector3f(0.0f,1.0f,0.0f));
+		audioMgr.getEar().setOrientation(camera.getN(),new org.joml.Vector3f(0.0f,1.0f,0.0f));
 	}
 
 	public GameObject getAvatar() { return avatar; }
@@ -363,16 +367,16 @@ public class MyGame extends VariableFrameRateGame
 	@Override
 	public void update()
 	{	
-		Matrix4f currentTranslation, currentRotation;
+		org.joml.Matrix4f currentTranslation, currentRotation;
 		double totalTime = System.currentTimeMillis() - startTime;
 		double amtt = totalTime * 0.001;
 
 		if (running)
 		{
 			AxisAngle4f aa = new AxisAngle4f();
-			Matrix4f mat = new Matrix4f();
-			Matrix4f mat2 = new Matrix4f().identity();
-			Matrix4f mat3 = new Matrix4f().identity();
+			org.joml.Matrix4f mat = new org.joml.Matrix4f();
+			org.joml.Matrix4f mat2 = new org.joml.Matrix4f().identity();
+			org.joml.Matrix4f mat3 = new org.joml.Matrix4f().identity();
 			checkForCollisions();
 			physicsEngine.update((float)elapsedTime);
 			for (GameObject go:engine.getSceneGraph().getGameObjects())
@@ -400,9 +404,9 @@ public class MyGame extends VariableFrameRateGame
 		oceanSound.setLocation(terr.getWorldLocation());
 		setEarParameters();
 
-		Vector3f locA = avatar.getWorldLocation();
+		org.joml.Vector3f locA = avatar.getWorldLocation();
 		float height = terr.getHeight(locA.x(), locA.z());
-		avatar.setLocalLocation(new Vector3f(locA.x(), height + robotHeightAdjust, locA.z()));
+		avatar.setLocalLocation(new org.joml.Vector3f(locA.x(), height + robotHeightAdjust, locA.z()));
 		//Vector3f locR = robot.getWorldLocation();
 		//robot.setLocalLocation(new Vector3f(loc.x(), height + robotHeightAdjust, loc.z()));
 
@@ -421,8 +425,8 @@ public class MyGame extends VariableFrameRateGame
 			+ (c.getLocation()).x()
 			+ ", " + (c.getLocation()).y()
 			+ ", " + (c.getLocation()).z();
-		Vector3f hud1Color = new Vector3f(1,0,0);
-		Vector3f hud2Color = new Vector3f(1,1,1);
+		org.joml.Vector3f hud1Color = new org.joml.Vector3f(1,0,0);
+		org.joml.Vector3f hud2Color = new org.joml.Vector3f(1,1,1);
 		(engine.getHUDmanager()).setHUD1(dispStr1, hud1Color, 15, 15);
 		(engine.getHUDmanager()).setHUD2(dispStr2, hud2Color, 500, 15);
 
@@ -433,41 +437,41 @@ public class MyGame extends VariableFrameRateGame
 	}
 
 	private void positionCameraBehindAvatar()
-	{	Vector4f u = new Vector4f(-1f,0f,0f,1f);
-		Vector4f v = new Vector4f(0f,1f,0f,1f);
-		Vector4f n = new Vector4f(0f,0f,1f,1f);
+	{	org.joml.Vector4f u = new org.joml.Vector4f(-1f,0f,0f,1f);
+		org.joml.Vector4f v = new org.joml.Vector4f(0f,1f,0f,1f);
+		org.joml.Vector4f n = new org.joml.Vector4f(0f,0f,1f,1f);
 		u.mul(avatar.getWorldRotation());
 		v.mul(avatar.getWorldRotation());
 		n.mul(avatar.getWorldRotation());
-		Matrix4f w = avatar.getWorldTranslation();
-		Vector3f position = new Vector3f(w.m30(), w.m31(), w.m32());
+		org.joml.Matrix4f w = avatar.getWorldTranslation();
+		org.joml.Vector3f position = new org.joml.Vector3f(w.m30(), w.m31(), w.m32());
 		position.add(-n.x()*2f, -n.y()*2f, -n.z()*2f);
 		position.add(v.x()*.75f, v.y()*.75f, v.z()*.75f);
 		Camera c = (engine.getRenderSystem()).getViewport("MAIN").getCamera();
 		c.setLocation(position);
-		c.setU(new Vector3f(u.x(),u.y(),u.z()));
-		c.setV(new Vector3f(v.x(),v.y(),v.z()));
-		c.setN(new Vector3f(n.x(),n.y(),n.z()));
+		c.setU(new org.joml.Vector3f(u.x(),u.y(),u.z()));
+		c.setV(new org.joml.Vector3f(v.x(),v.y(),v.z()));
+		c.setN(new org.joml.Vector3f(n.x(),n.y(),n.z()));
 	}
 
 	@Override
 	public void keyPressed(KeyEvent e)
 	{	switch (e.getKeyCode())
 		{	case KeyEvent.VK_W:
-			{	Vector3f oldPosition = avatar.getWorldLocation();
-				Vector4f fwdDirection = new Vector4f(0f,0f,1f,1f);
+			{	org.joml.Vector3f oldPosition = avatar.getWorldLocation();
+				org.joml.Vector4f fwdDirection = new org.joml.Vector4f(0f,0f,1f,1f);
 				fwdDirection.mul(avatar.getWorldRotation());
 				fwdDirection.mul(0.05f);
-				Vector3f newPosition = oldPosition.add(fwdDirection.x(), fwdDirection.y(), fwdDirection.z());
+				org.joml.Vector3f newPosition = oldPosition.add(fwdDirection.x(), fwdDirection.y(), fwdDirection.z());
 				avatar.setLocalLocation(newPosition);
 				protClient.sendMoveMessage(avatar.getWorldLocation());
 				break;
 			}
 			case KeyEvent.VK_D:
-			{	Matrix4f oldRotation = new Matrix4f(avatar.getWorldRotation());
-				Vector4f oldUp = new Vector4f(0f,1f,0f,1f).mul(oldRotation);
-				Matrix4f rotAroundAvatarUp = new Matrix4f().rotation(-.01f, new Vector3f(oldUp.x(), oldUp.y(), oldUp.z()));
-				Matrix4f newRotation = oldRotation;
+			{	org.joml.Matrix4f oldRotation = new org.joml.Matrix4f(avatar.getWorldRotation());
+				org.joml.Vector4f oldUp = new org.joml.Vector4f(0f,1f,0f,1f).mul(oldRotation);
+				org.joml.Matrix4f rotAroundAvatarUp = new org.joml.Matrix4f().rotation(-.01f, new org.joml.Vector3f(oldUp.x(), oldUp.y(), oldUp.z()));
+				org.joml.Matrix4f newRotation = oldRotation;
 				newRotation.mul(rotAroundAvatarUp);
 				avatar.setLocalRotation(newRotation);
 				break;
@@ -514,7 +518,7 @@ public class MyGame extends VariableFrameRateGame
 			protClient.processPackets();
 	}
 
-	public Vector3f getPlayerPosition() { return avatar.getWorldLocation(); }
+	public org.joml.Vector3f getPlayerPosition() { return avatar.getWorldLocation(); }
 
 	public void setIsConnected(boolean value) { this.isClientConnected = value; }
 	

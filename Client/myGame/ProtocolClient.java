@@ -10,12 +10,14 @@ import org.joml.*;
 
 import tage.*;
 import tage.networking.client.GameConnectionClient;
+import tage.rml.Vector3f;
 
 public class ProtocolClient extends GameConnectionClient
 {
 	private MyGame game;
 	private GhostManager ghostManager;
 	private UUID id;
+	private GhostNPC ghostNPC;
 	
 	public ProtocolClient(InetAddress remoteAddr, int remotePort, ProtocolType protocolType, MyGame game) throws IOException 
 	{	super(remoteAddr, remotePort, protocolType);
@@ -42,6 +44,13 @@ public class ProtocolClient extends GameConnectionClient
 				{	System.out.println("join success confirmed");
 					game.setIsConnected(true);
 					sendCreateMessage(game.getPlayerPosition());
+
+					try {
+            sendPacket("needNPC," + id.toString());
+            System.out.println("Requested NPC from server");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 				}
 				if(messageTokens[1].compareTo("failure") == 0)
 				{	System.out.println("join failure confirmed");
@@ -67,8 +76,8 @@ public class ProtocolClient extends GameConnectionClient
 				// Parse out the id into a UUID
 				UUID ghostID = UUID.fromString(messageTokens[1]);
 				
-				// Parse out the position into a Vector3f
-				Vector3f ghostPosition = new Vector3f(
+				// Parse out the position into a org.joml.Vector3f
+				org.joml.Vector3f ghostPosition = new org.joml.Vector3f(
 					Float.parseFloat(messageTokens[2]),
 					Float.parseFloat(messageTokens[3]),
 					Float.parseFloat(messageTokens[4]));
@@ -76,7 +85,7 @@ public class ProtocolClient extends GameConnectionClient
 				try
 				{	ghostManager.createGhostAvatar(ghostID, ghostPosition);
 				}	catch (IOException e)
-				{	System.out.println("error creating ghost avatar");
+				{	System.out.println("error creating ghost avatar or npc");
 				}
 			}
 			
@@ -98,14 +107,72 @@ public class ProtocolClient extends GameConnectionClient
 				// Parse out the id into a UUID
 				UUID ghostID = UUID.fromString(messageTokens[1]);
 				
-				// Parse out the position into a Vector3f
-				Vector3f ghostPosition = new Vector3f(
+				// Parse out the position into a org.joml.Vector3f
+				org.joml.Vector3f ghostPosition = new org.joml.Vector3f(
 					Float.parseFloat(messageTokens[2]),
 					Float.parseFloat(messageTokens[3]),
 					Float.parseFloat(messageTokens[4]));
 				
 				ghostManager.updateGhostAvatar(ghostID, ghostPosition);
-	}	}	}
+			}
+
+			//npc conditions
+			if (messageTokens[0].compareTo("createNPC") == 0)
+			{  // create a new ghost NPC
+				// Parse out the position
+				org.joml.Vector3f ghostPosition = new org.joml.Vector3f(
+				Float.parseFloat(messageTokens[1]),
+				Float.parseFloat(messageTokens[2]),
+				Float.parseFloat(messageTokens[3]));
+				try{createGhostNPC(ghostPosition);} catch (IOException e) { System.out.println("error creating NPC"); } // error creating ghost avatar
+			} 
+
+			if (messageTokens[0].equals("npcinfo")) {
+			org.joml.Vector3f newPos = new org.joml.Vector3f(
+				Float.parseFloat(messageTokens[1]),
+				Float.parseFloat(messageTokens[2]),
+				Float.parseFloat(messageTokens[3]));
+			double gsize = Double.parseDouble(messageTokens[4]);
+			updateGhostNPC(newPos, gsize);
+			System.out.println("[ProtocolClient] Updated NPC position and size to " + newPos + ", " + gsize);
+			}
+			/*
+			if (messageTokens[0].equals("mnpc")) {
+				org.joml.Vector3f newPos = new org.joml.Vector3f(
+				Float.parseFloat(messageTokens[1]),
+				Float.parseFloat(messageTokens[2]),
+				Float.parseFloat(messageTokens[3]));
+    			if (ghostNPC != null) {
+					ghostNPC.setPosition(newPos);
+					System.out.println("[ProtocolClient] Moved ghostNPC to " + newPos);
+				}
+			}*/
+
+			if (messageTokens[0].equals("isnear")) {
+				// Parse NPC position and proximity threshold
+				float npcX = Float.parseFloat(messageTokens[1]);
+				float npcY = Float.parseFloat(messageTokens[2]);
+				float npcZ = Float.parseFloat(messageTokens[3]);
+				double criteria = Double.parseDouble(messageTokens[4]);
+
+				// Get player position
+				org.joml.Vector3f playerPos = game.getPlayerPosition();
+				org.joml.Vector3f npcPos = new org.joml.Vector3f(npcX, npcY, npcZ);
+
+				// Calculate Euclidean distance
+				double dist = playerPos.distance(npcPos);
+
+				// If within proximity, reply to server
+				if (dist < criteria) {
+					System.out.println("[ProtocolClient] NPC is nearby! Distance: " + dist);
+					sendNearReply(); // reply to server
+				} else {
+					System.out.println("[ProtocolClient] NPC is too far. Distance: " + dist);
+				}
+			}
+		}
+	}
+
 	
 	// The initial message from the game client requesting to join the 
 	// server. localId is a unique identifier for the client. Recommend 
@@ -129,12 +196,12 @@ public class ProtocolClient extends GameConnectionClient
 		{	e.printStackTrace();
 	}	}
 	
-	// Informs the server of the client’s Avatar’s position. The server 
+	// Informs the server of the clientï¿½s Avatarï¿½s position. The server 
 	// takes this message and forwards it to all other clients registered 
 	// with the server.
 	// Message Format: (create,localId,x,y,z) where x, y, and z represent the position
 
-	public void sendCreateMessage(Vector3f position)
+	public void sendCreateMessage(org.joml.Vector3f position)
 	{	try 
 		{	String message = new String("create," + id.toString());
 			message += "," + position.x();
@@ -152,7 +219,7 @@ public class ProtocolClient extends GameConnectionClient
 	// from the server.
 	// Message Format: (dsfr,remoteId,localId,x,y,z) where x, y, and z represent the position.
 
-	public void sendDetailsForMessage(UUID remoteId, Vector3f position)
+	public void sendDetailsForMessage(UUID remoteId, org.joml.Vector3f position)
 	{	try 
 		{	String message = new String("dsfr," + remoteId.toString() + "," + id.toString());
 			message += "," + position.x();
@@ -167,7 +234,7 @@ public class ProtocolClient extends GameConnectionClient
 	// Informs the server that the local avatar has changed position.  
 	// Message Format: (move,localId,x,y,z) where x, y, and z represent the position.
 
-	public void sendMoveMessage(Vector3f position)
+	public void sendMoveMessage(org.joml.Vector3f position)
 	{	try 
 		{	String message = new String("move," + id.toString());
 			message += "," + position.x();
@@ -178,4 +245,35 @@ public class ProtocolClient extends GameConnectionClient
 		} catch (IOException e) 
 		{	e.printStackTrace();
 	}	}
+
+// ------------- GHOST NPC SECTION --------------
+	private void createGhostNPC(org.joml.Vector3f position) throws IOException
+	{ 
+		if (ghostNPC == null){
+		ghostNPC = new GhostNPC(0, game.getNPCshape(),
+		game.getNPCtexture(), position);
+		//game.getEngine().getSceneGraph().addGameObject(ghostNPC); 
+		}
+	}
+	private void updateGhostNPC(org.joml.Vector3f position, double gsize)
+	{ 
+		boolean gs;
+		if (ghostNPC == null)
+		{ 
+			try { createGhostNPC(position);} 
+			catch (IOException e) { System.out.println("error creating npc"); }
+		}
+		ghostNPC.setPosition(position);
+		if (gsize == 1.0) gs=false; else gs=true;
+			ghostNPC.setSize(gs);
+	}
+	//might need find npc
+
+	public void sendNearReply() {
+    try {
+        sendPacket("isnear," + id.toString());
+    } catch (IOException e) {
+        e.printStackTrace();
+    }
+}
 }
