@@ -23,6 +23,9 @@ import net.java.games.input.*;
 import net.java.games.input.Component.Identifier.*;
 import tage.networking.IGameConnection.ProtocolType;
 import tage.rml.Matrix4;
+import tage.rml.Matrix4f;
+import tage.rml.Vector3f;
+import tage.rml.Vector4f;
 import tage.audio.*;
 
 import tage.physics.JBullet.*;
@@ -279,21 +282,20 @@ public class MyGame extends VariableFrameRateGame
 		// ----------------- INPUTS SECTION -----------------------------
 		im = engine.getInputManager();
 
-		// build some action objects for doing things in response to user input
-		FwdAction fwdAction = new FwdAction(this, protClient);
-		TurnAction turnAction = new TurnAction(this);
+		// build some action objects for doing things in response to user inputsetupNetworking(); // <-- Move this up FIRST so protClient gets initialized
+setupNetworking();
+// THEN do input setup once protClient is valid
+MoveAction fwdAction = new MoveAction(this, protClient, 10.0f);
+TurnAction turnAction = new TurnAction(this, 10.0f);
 
-		// attach the action objects to keyboard and gamepad components
-		im.associateActionWithAllGamepads(
-			net.java.games.input.Component.Identifier.Button._1,
-			fwdAction, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
-		im.associateActionWithAllGamepads(
-			net.java.games.input.Component.Identifier.Axis.X,
-			turnAction, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
+im.associateActionWithAllGamepads(
+	net.java.games.input.Component.Identifier.Button._1,
+	fwdAction, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
+im.associateActionWithAllGamepads(
+	net.java.games.input.Component.Identifier.Axis.X,
+	turnAction, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
 
-		setupNetworking();
-	}
-
+}
 	public void setEarParameters()
 	{
 		Camera camera = (engine.getRenderSystem()).getViewport("MAIN").getCamera();
@@ -454,37 +456,50 @@ public class MyGame extends VariableFrameRateGame
 		c.setN(new org.joml.Vector3f(n.x(),n.y(),n.z()));
 	}
 
-	@Override
-	public void keyPressed(KeyEvent e)
-	{	switch (e.getKeyCode())
-		{	case KeyEvent.VK_W:
-			{	org.joml.Vector3f oldPosition = avatar.getWorldLocation();
-				org.joml.Vector4f fwdDirection = new org.joml.Vector4f(0f,0f,1f,1f);
-				fwdDirection.mul(avatar.getWorldRotation());
-				fwdDirection.mul(0.05f);
-				org.joml.Vector3f newPosition = oldPosition.add(fwdDirection.x(), fwdDirection.y(), fwdDirection.z());
-				avatar.setLocalLocation(newPosition);
-				protClient.sendMoveMessage(avatar.getWorldLocation());
-				break;
-			}
-			case KeyEvent.VK_D:
-			{	org.joml.Matrix4f oldRotation = new org.joml.Matrix4f(avatar.getWorldRotation());
-				org.joml.Vector4f oldUp = new org.joml.Vector4f(0f,1f,0f,1f).mul(oldRotation);
-				org.joml.Matrix4f rotAroundAvatarUp = new org.joml.Matrix4f().rotation(-.01f, new org.joml.Vector3f(oldUp.x(), oldUp.y(), oldUp.z()));
-				org.joml.Matrix4f newRotation = oldRotation;
-				newRotation.mul(rotAroundAvatarUp);
-				avatar.setLocalRotation(newRotation);
-				break;
-			}
-			case KeyEvent.VK_SPACE:
-			{
-				System.out.println("starting physics");
-				running = true;
-				break;
-			}
+@Override
+public void keyPressed(KeyEvent e) {
+	switch (e.getKeyCode()) {
+		case KeyEvent.VK_W: { // Move forward
+			org.joml.Vector3f oldPosition = avatar.getWorldLocation();
+			org.joml.Vector4f fwdDirection = new org.joml.Vector4f(0f, 0f, 1f, 1f);
+			fwdDirection.mul(avatar.getWorldRotation()).mul(0.1f);
+			org.joml.Vector3f newPosition = oldPosition.add(fwdDirection.x(), fwdDirection.y(), fwdDirection.z());
+			avatar.setLocalLocation(newPosition);
+			protClient.sendMoveMessage(avatar.getWorldLocation());
+			break;
 		}
-		super.keyPressed(e);
+		case KeyEvent.VK_S: { // Move backward
+			org.joml.Vector3f oldPosition = avatar.getWorldLocation();
+			org.joml.Vector4f backDirection = new org.joml.Vector4f(0f, 0f, 1f, 1f);
+			backDirection.mul(avatar.getWorldRotation()).mul(-0.1f);
+			org.joml.Vector3f newPosition = oldPosition.add(backDirection.x(), backDirection.y(), backDirection.z());
+			avatar.setLocalLocation(newPosition);
+			protClient.sendMoveMessage(avatar.getWorldLocation());
+			break;
+		}
+		case KeyEvent.VK_D: { // Turn right
+			org.joml.Matrix4f oldRotation = new org.joml.Matrix4f(avatar.getWorldRotation());
+			org.joml.Vector4f oldUp = new org.joml.Vector4f(0f, 1f, 0f, 0f).mul(oldRotation);
+			org.joml.Matrix4f rotRight = new org.joml.Matrix4f().rotation(-0.05f, new org.joml.Vector3f(oldUp.x(), oldUp.y(), oldUp.z()));
+			avatar.setLocalRotation(oldRotation.mul(rotRight));
+			break;
+		}
+		case KeyEvent.VK_A: { // Turn left
+			org.joml.Matrix4f oldRotation = new org.joml.Matrix4f(avatar.getWorldRotation());
+			org.joml.Vector4f oldUp = new org.joml.Vector4f(0f, 1f, 0f, 0f).mul(oldRotation);
+			org.joml.Matrix4f rotLeft = new org.joml.Matrix4f().rotation(0.05f, new org.joml.Vector3f(oldUp.x(), oldUp.y(), oldUp.z()));
+			avatar.setLocalRotation(oldRotation.mul(rotLeft));
+			break;
+		}
+		case KeyEvent.VK_SPACE: {
+			System.out.println("starting physics");
+			running = true;
+			break;
+		}
 	}
+	super.keyPressed(e);
+}
+
 
 	// ---------- NETWORKING SECTION ----------------
 
