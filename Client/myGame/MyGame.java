@@ -227,7 +227,8 @@ public class MyGame extends VariableFrameRateGame
 	@Override
 	public void initializeGame()
 	{	
-		float[]gravity = {0f, .5f, 0f};
+		im = engine.getInputManager();
+		float[]gravity = {0f, -.5f, 0f};
 		physicsEngine = (engine.getSceneGraph()).getPhysicsEngine();
 		physicsEngine.setGravity(gravity);
 
@@ -268,17 +269,32 @@ public class MyGame extends VariableFrameRateGame
 		terr.setPhysicsObject(planeP);
 		engine.enableGraphicsWorldRender();
 		engine.enablePhysicsWorldRender();
-		double[] avatarTransform = toDoubleArray(
-    new org.joml.Matrix4f(avatar.getLocalTranslation()).get(vals));
-float avatarRadius = 0.75f;
-float avatarMass   = 1.0f;               // mass > 0 = dynamic
-// add a capsule (or sphere) physics body for the avatar
-PhysicsObject avatarPhy = engine
-    .getSceneGraph()
-    .addPhysicsCapsuleX(avatarMass, avatarTransform, avatarRadius, avatarRadius*2);
-avatarPhy.setBounciness(0.1f);
-avatar.setPhysicsObject(avatarPhy);
-avatarPhy.setDamping(0.1f, 0.9f);
+
+		// 3) spawn the avatar at a constant offset so its feet sit on Y=0
+    float spawnX = -1f, spawnZ = 1f;
+    float avatarRadius    = 0.75f;
+    float avatarCylHeight = avatarRadius * 2f;
+    // half of total capsule height = (cylHeight + 2*radius)/2 = 2*radius
+    float capsuleHalfH    = avatarRadius * 2f;
+    float spawnY          = capsuleHalfH; 
+
+    // reposition the graphics node
+    org.joml.Matrix4f xform = new org.joml.Matrix4f()
+        .translation(spawnX, spawnY, spawnZ);
+    avatar.setLocalTranslation(xform);
+
+    // now build its physics body at that same transform
+    double[] physXform = toDoubleArray(avatar.getLocalTranslation().get(vals));
+    PhysicsObject avatarPhy = engine.getSceneGraph()
+        .addPhysicsCapsuleX(
+            1.0f,         // mass
+            physXform,    // initial transform
+            avatarRadius, // radius
+            avatarCylHeight
+        );
+    avatarPhy.setBounciness(0.1f);
+    avatarPhy.setDamping(0.1f, 0.1f);
+    avatar.setPhysicsObject(avatarPhy);
 
 
 
@@ -298,15 +314,14 @@ avatarPhy.setDamping(0.1f, 0.9f);
 		positionCameraBehindAvatar();
 
 		// ----------------- INPUTS SECTION -----------------------------
-		im = engine.getInputManager();
 
 		// build some action objects for doing things in response to user inputsetupNetworking(); // <-- Move this up FIRST so protClient gets initialized
 setupNetworking();
 // map W/S on the keyboard to MoveAction
-MoveAction move = new MoveAction(this, protClient, 10f);
-MoveAction backward = new MoveAction(this, protClient, -10f);
-TurnAction turnRight = new TurnAction(this,  5.0f);
-TurnAction turnLeft  = new TurnAction(this, -5.0f);
+MoveAction move = new MoveAction(this, protClient, 1000f);
+MoveAction backward = new MoveAction(this, protClient, -1000f);
+TurnAction turnRight = new TurnAction(this,  1000f);
+TurnAction turnLeft  = new TurnAction(this, -1000f);
 
 im.associateAction(
     net.java.games.input.Component.Identifier.Key.W,
@@ -315,7 +330,7 @@ im.associateAction(
     net.java.games.input.Component.Identifier.Key.S,
     backward, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
 	
-	im.associateAction(
+im.associateAction(
     net.java.games.input.Component.Identifier.Key.D,
     turnRight,
     InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
@@ -396,36 +411,34 @@ im.associateAction(
 	@Override
 	public void update()
 	{	
-		org.joml.Matrix4f currentTranslation, currentRotation;
-		double totalTime = System.currentTimeMillis() - startTime;
-		double amtt = totalTime * 0.001;
+    // always step the physics if running, but also
+    // always copy existing physics transforms so that
+    // MoveAction impulses before SPACE will still show up
+    /*if (running) {
+        physicsEngine.update((float)elapsedTime);
+    }*/
+		im.update((float)elapsedTime);
+	physicsEngine.update((float)elapsedTime);
 
-		if (running)
-		{
-			AxisAngle4f aa = new AxisAngle4f();
-			org.joml.Matrix4f mat = new org.joml.Matrix4f();
-			org.joml.Matrix4f mat2 = new org.joml.Matrix4f().identity();
-			org.joml.Matrix4f mat3 = new org.joml.Matrix4f().identity();
-			checkForCollisions();
-			physicsEngine.update((float)elapsedTime);
-			for (GameObject go:engine.getSceneGraph().getGameObjects())
-			{
-				if(go.getPhysicsObject()!= null)
-				{
-					mat.set(toFloatArray(go.getPhysicsObject().getTransform()));
-					mat2.set(3,0,mat.m30());
-					mat2.set(3,1,mat.m31());
-					mat2.set(3,2,mat.m32());
-					go.setLocalTranslation(mat2);
+    // copy transforms every frame, regardless
+    AxisAngle4f aa = new AxisAngle4f();
+    org.joml.Matrix4f mat  = new org.joml.Matrix4f();
+    org.joml.Matrix4f mat2 = new org.joml.Matrix4f().identity();
+    org.joml.Matrix4f mat3 = new org.joml.Matrix4f().identity();
+    for (GameObject go : engine.getSceneGraph().getGameObjects()) {
+        PhysicsObject pObj = go.getPhysicsObject();
+        if (pObj != null) {
+            mat.set(toFloatArray(pObj.getTransform()));
+            mat2.set(3,0,mat.m30());
+            mat2.set(3,1,mat.m31());
+            mat2.set(3,2,mat.m32());
+            go.setLocalTranslation(mat2);
 
-					mat.getRotation(aa);
-					mat3.rotation(aa);
-					go.setLocalRotation(mat3);
-					
-				}
-			}
-
-		}
+            mat.getRotation(aa);
+            mat3.rotation(aa);
+            go.setLocalRotation(mat3);
+        }
+    }
 
 
 		robS.updateAnimation();
@@ -483,38 +496,6 @@ im.associateAction(
 @Override
 public void keyPressed(KeyEvent e) {
 	switch (e.getKeyCode()) {
-		/*case KeyEvent.VK_W: { // Move forward
-			org.joml.Vector3f oldPosition = avatar.getWorldLocation();
-			org.joml.Vector4f fwdDirection = new org.joml.Vector4f(0f, 0f, 1f, 1f);
-			fwdDirection.mul(avatar.getWorldRotation()).mul(0.1f);
-			org.joml.Vector3f newPosition = oldPosition.add(fwdDirection.x(), fwdDirection.y(), fwdDirection.z());
-			avatar.setLocalLocation(newPosition);
-			protClient.sendMoveMessage(avatar.getWorldLocation());
-			break;
-		}
-		case KeyEvent.VK_S: { // Move backward
-			org.joml.Vector3f oldPosition = avatar.getWorldLocation();
-			org.joml.Vector4f backDirection = new org.joml.Vector4f(0f, 0f, 1f, 1f);
-			backDirection.mul(avatar.getWorldRotation()).mul(-0.1f);
-			org.joml.Vector3f newPosition = oldPosition.add(backDirection.x(), backDirection.y(), backDirection.z());
-			avatar.setLocalLocation(newPosition);
-			protClient.sendMoveMessage(avatar.getWorldLocation());
-			break;
-		}
-		case KeyEvent.VK_D: { // Turn right
-			org.joml.Matrix4f oldRotation = new org.joml.Matrix4f(avatar.getWorldRotation());
-			org.joml.Vector4f oldUp = new org.joml.Vector4f(0f, 1f, 0f, 0f).mul(oldRotation);
-			org.joml.Matrix4f rotRight = new org.joml.Matrix4f().rotation(-0.05f, new org.joml.Vector3f(oldUp.x(), oldUp.y(), oldUp.z()));
-			avatar.setLocalRotation(oldRotation.mul(rotRight));
-			break;
-		}
-		case KeyEvent.VK_A: { // Turn left
-			org.joml.Matrix4f oldRotation = new org.joml.Matrix4f(avatar.getWorldRotation());
-			org.joml.Vector4f oldUp = new org.joml.Vector4f(0f, 1f, 0f, 0f).mul(oldRotation);
-			org.joml.Matrix4f rotLeft = new org.joml.Matrix4f().rotation(0.05f, new org.joml.Vector3f(oldUp.x(), oldUp.y(), oldUp.z()));
-			avatar.setLocalRotation(oldRotation.mul(rotLeft));
-			break;
-		}*/
 		case KeyEvent.VK_SPACE: {
 			System.out.println("starting physics");
 			running = true;
