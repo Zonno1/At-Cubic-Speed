@@ -9,6 +9,7 @@ import java.util.Vector;
 import org.joml.*;
 
 import tage.*;
+import tage.physics.PhysicsObject;
 
 public class GhostManager
 {
@@ -26,6 +27,15 @@ public class GhostManager
 		GhostAvatar newAvatar = new GhostAvatar(id, s, t, position);
 		Matrix4f initialScale = (new Matrix4f()).scaling(0.25f);
 		newAvatar.setLocalScale(initialScale);
+		double[] ghostXform = game.toDoubleArray(newAvatar.getLocalTranslation().get(game.vals));
+float ghostRadius = 0.75f;
+// mass = 0 makes it static/kinematic — other bodies will collide but it won’t fall
+PhysicsObject ghostPhy = game
+    .getEngine()
+    .getSceneGraph()
+    .addPhysicsSphere(0.0f, ghostXform, ghostRadius);
+ghostPhy.setBounciness(0f);
+newAvatar.setPhysicsObject(ghostPhy);
 		ghostAvatars.add(newAvatar);
 	}
 	
@@ -56,9 +66,15 @@ public class GhostManager
 	{	GhostAvatar ghostAvatar = findAvatar(id);
 		if (ghostAvatar != null)
 		{	ghostAvatar.setPosition(position);
+			double[] newXform = game.toDoubleArray(
+    ghostAvatar.getLocalTranslation().get(game.vals));
+ghostAvatar
+    .getPhysicsObject()
+    .setTransform(newXform);
 		}
 		else
 		{	System.out.println("tried to update ghost avatar position, but unable to find ghost in list");
 		}
 	}
+	
 }

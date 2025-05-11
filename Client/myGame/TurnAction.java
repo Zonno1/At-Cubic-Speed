@@ -1,35 +1,30 @@
+// TurnAction.java
 package myGame;
 
-import tage.*;
 import tage.input.action.AbstractInputAction;
+import tage.physics.PhysicsObject;
+import tage.physics.JBullet.JBulletPhysicsObject;
+import com.bulletphysics.dynamics.RigidBody;
+import javax.vecmath.Vector3f;
 import net.java.games.input.Event;
-import org.joml.*;
+import com.bulletphysics.collision.dispatch.CollisionObject;
 
 public class TurnAction extends AbstractInputAction {
-	private MyGame game;
-	private float direction; // 1 for right turn, -1 for left turn
+    private MyGame      game;
+    private float       turnRate;
 
-	public TurnAction(MyGame g, float dir) {
-		game = g;
-		direction = dir;
-	}
-
-	@Override
-	public void performAction(float time, Event e) {
-		float keyValue = e.getValue();
-		if (java.lang.Math.abs(keyValue) < 0.2f) return; // deadzone
-
-		GameObject av = game.getAvatar();
-		Matrix4f oldRotation = new Matrix4f(av.getWorldRotation());
-		Vector4f oldUp = new Vector4f(0f, 1f, 0f, 0f).mul(oldRotation);
-		Vector3f up = new Vector3f(oldUp.x(), oldUp.y(), oldUp.z());
-
-		float angle = -0.01f * keyValue * direction; // multiply by direction flag
-		Matrix4f rotAroundUp = new Matrix4f().rotation(angle, up);
-		Matrix4f newRotation = new Matrix4f(oldRotation).mul(rotAroundUp);
-		av.setLocalRotation(newRotation);
-	}
+    public TurnAction(MyGame g, float rate) {
+        game     = g;
+        turnRate = rate;   // radians per second
+    }
+    @Override
+    public void performAction(float t, Event e) {
+        // fetch the physics body
+ PhysicsObject pObj = game.getAvatar().getPhysicsObject();
+   JBulletPhysicsObject jbObj = (JBulletPhysicsObject)pObj;
+   RigidBody           rb    = jbObj.getRigidBody();
+        // apply a torque around the world‑up (Y) axis
+        // positive Y → turn right, negative → turn left
+        rb.applyTorqueImpulse(new Vector3f(0, turnRate * t, 0));
+    }
 }
-
-
-

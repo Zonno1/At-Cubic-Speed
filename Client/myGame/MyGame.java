@@ -22,13 +22,10 @@ import org.joml.*;
 import net.java.games.input.*;
 import net.java.games.input.Component.Identifier.*;
 import tage.networking.IGameConnection.ProtocolType;
-import tage.rml.Matrix4;
-import tage.rml.Matrix4f;
-import tage.rml.Vector3f;
-import tage.rml.Vector4f;
 import tage.audio.*;
 
 import tage.physics.JBullet.*;
+import tage.rml.Vector3f;
 import tage.physics.PhysicsEngine;
 import tage.physics.PhysicsObject;
 import com.bulletphysics.dynamics.RigidBody;
@@ -63,7 +60,7 @@ public class MyGame extends VariableFrameRateGame
 	private IAudioManager audioMgr;
 	private Sound hereSound, oceanSound;
 	private boolean running = false;
-	private float vals[] = new float[16];
+	float vals[] = new float[16];
 
 	private ObjShape npcShape;
 	private TextureImage npcTex;
@@ -191,6 +188,16 @@ public class MyGame extends VariableFrameRateGame
 		avatar.setLocalTranslation(initialTranslation);
 		initialRotation = (new org.joml.Matrix4f()).rotationY((float)java.lang.Math.toRadians(135.0f));
 		avatar.setLocalRotation(initialRotation);
+		double[] transform = toDoubleArray(avatar.getLocalTranslation().get(vals));
+		/*float radius = 0.75f;
+		float mass   = 1.0f;
+		// add a sphere shape physics body at avatar’s start location
+		PhysicsObject avatarPhy = engine
+			.getSceneGraph()
+			.addPhysicsSphere(mass, transform, radius);
+		avatarPhy.setBounciness(0.1f);
+		// link it to the GameObject so JBullet drives its movement
+		avatar.setPhysicsObject(avatarPhy);*/
 
 		// build torus along X axis
 		tor = new GameObject(GameObject.root(), torS, torX);
@@ -261,6 +268,17 @@ public class MyGame extends VariableFrameRateGame
 		terr.setPhysicsObject(planeP);
 		engine.enableGraphicsWorldRender();
 		engine.enablePhysicsWorldRender();
+		double[] avatarTransform = toDoubleArray(
+    new org.joml.Matrix4f(avatar.getLocalTranslation()).get(vals));
+float avatarRadius = 0.75f;
+float avatarMass   = 1.0f;               // mass > 0 = dynamic
+// add a capsule (or sphere) physics body for the avatar
+PhysicsObject avatarPhy = engine
+    .getSceneGraph()
+    .addPhysicsCapsuleX(avatarMass, avatarTransform, avatarRadius, avatarRadius*2);
+avatarPhy.setBounciness(0.1f);
+avatar.setPhysicsObject(avatarPhy);
+avatarPhy.setDamping(0.1f, 0.9f);
 
 
 
@@ -284,16 +302,28 @@ public class MyGame extends VariableFrameRateGame
 
 		// build some action objects for doing things in response to user inputsetupNetworking(); // <-- Move this up FIRST so protClient gets initialized
 setupNetworking();
-// THEN do input setup once protClient is valid
-MoveAction fwdAction = new MoveAction(this, protClient, 10.0f);
-TurnAction turnAction = new TurnAction(this, 10.0f);
+// map W/S on the keyboard to MoveAction
+MoveAction move = new MoveAction(this, protClient, 10f);
+MoveAction backward = new MoveAction(this, protClient, -10f);
+TurnAction turnRight = new TurnAction(this,  5.0f);
+TurnAction turnLeft  = new TurnAction(this, -5.0f);
 
-im.associateActionWithAllGamepads(
-	net.java.games.input.Component.Identifier.Button._1,
-	fwdAction, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
-im.associateActionWithAllGamepads(
-	net.java.games.input.Component.Identifier.Axis.X,
-	turnAction, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
+im.associateAction(
+    net.java.games.input.Component.Identifier.Key.W,
+    move, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
+im.associateAction(
+    net.java.games.input.Component.Identifier.Key.S,
+    backward, InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
+	
+	im.associateAction(
+    net.java.games.input.Component.Identifier.Key.D,
+    turnRight,
+    InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
+
+im.associateAction(
+    net.java.games.input.Component.Identifier.Key.A,
+    turnLeft,
+    InputManager.INPUT_ACTION_TYPE.REPEAT_WHILE_DOWN);
 
 }
 	public void setEarParameters()
@@ -317,7 +347,7 @@ im.associateActionWithAllGamepads(
 		return ret;
 	}
 
-	private double[] toDoubleArray(float[] arr)
+	double[] toDoubleArray(float[] arr)
 	{
 		if (arr == null) return null;
 		int n = arr.length;
@@ -361,9 +391,6 @@ im.associateActionWithAllGamepads(
 			
 		}
 
-
-
-
 	}
 
 	@Override
@@ -406,12 +433,9 @@ im.associateActionWithAllGamepads(
 		oceanSound.setLocation(terr.getWorldLocation());
 		setEarParameters();
 
-		org.joml.Vector3f locA = avatar.getWorldLocation();
+		/*org.joml.Vector3f locA = avatar.getWorldLocation();
 		float height = terr.getHeight(locA.x(), locA.z());
-		avatar.setLocalLocation(new org.joml.Vector3f(locA.x(), height + robotHeightAdjust, locA.z()));
-		//Vector3f locR = robot.getWorldLocation();
-		//robot.setLocalLocation(new Vector3f(loc.x(), height + robotHeightAdjust, loc.z()));
-
+		avatar.setLocalLocation(new org.joml.Vector3f(locA.x(), height + robotHeightAdjust, locA.z()));*/
 		
 		elapsedTime = System.currentTimeMillis() - prevTime;
 		prevTime = System.currentTimeMillis();
@@ -459,7 +483,7 @@ im.associateActionWithAllGamepads(
 @Override
 public void keyPressed(KeyEvent e) {
 	switch (e.getKeyCode()) {
-		case KeyEvent.VK_W: { // Move forward
+		/*case KeyEvent.VK_W: { // Move forward
 			org.joml.Vector3f oldPosition = avatar.getWorldLocation();
 			org.joml.Vector4f fwdDirection = new org.joml.Vector4f(0f, 0f, 1f, 1f);
 			fwdDirection.mul(avatar.getWorldRotation()).mul(0.1f);
@@ -490,7 +514,7 @@ public void keyPressed(KeyEvent e) {
 			org.joml.Matrix4f rotLeft = new org.joml.Matrix4f().rotation(0.05f, new org.joml.Vector3f(oldUp.x(), oldUp.y(), oldUp.z()));
 			avatar.setLocalRotation(oldRotation.mul(rotLeft));
 			break;
-		}
+		}*/
 		case KeyEvent.VK_SPACE: {
 			System.out.println("starting physics");
 			running = true;
